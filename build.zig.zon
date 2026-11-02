@@ -1,0 +1,14 @@
+.{
+    .name = .anthropic,
+    .version = "0.1.0",
+    .fingerprint = 0x40d29669258a1827, // Changing this has security and trust implications.
+    .minimum_zig_version = "0.17.0",
+    .dependencies = .{
+        .openapi2zig = .{
+            .url = "git+https://github.com/h0rv/openapi2zig.git#ea81ba8fec5e037e3c649e0102a00ca2b927018f",
+            .hash = "openapi2zig-0.6.1-ykENApJBdAHkt16CkPwGyKjxWFGna196lm--3Ld3Ujka",
+            .lazy = true,
+        },
+    },
+    .paths = .{ "build.zig", "build.zig.zon", "spec.lock.json", "src", "examples", "LICENSE", "THIRD_PARTY_LICENSES", "README.md" },
+}
