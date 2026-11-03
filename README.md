@@ -11,7 +11,11 @@ zig fetch --save=anthropic git+https://github.com/h0rv/anthropic.zig.git
 Pin a release or commit in your project. Add the module in `build.zig`.
 
 ```zig
-const dep = b.dependency("anthropic", .{ .target = target, .optimize = optimize });
+const dep = b.dependency("anthropic", .{
+    .target = target,
+    .optimize = optimize,
+});
+
 exe.root_module.addImport("anthropic", dep.module("anthropic"));
 ```
 
@@ -22,25 +26,42 @@ const std = @import("std");
 const anthropic = @import("anthropic");
 
 pub fn main(init: std.process.Init) !void {
-    const key = init.environ_map.get("ANTHROPIC_API_KEY") orelse return error.MissingApiKey;
+    const key = init.environ_map.get("ANTHROPIC_API_KEY") orelse
+        return error.MissingApiKey;
+
     var client = anthropic.Client.init(init.gpa, init.io, "");
     defer client.deinit();
+
     client.default_headers = &.{
         .{ .name = "x-api-key", .value = key },
         .{ .name = "anthropic-version", .value = "2026-10-21" },
     };
-    const messages = [_]anthropic.InputMessageUnion{
-        .{ .user_input_message = .{ .role = "user", .content = .{ .string = "Say hello." } } },
-    };
-    var response = try anthropic.resources.messages.create(&client, .{}, .{
+
+    const request = .{
         .model = "claude-sonnet-4-6",
         .max_tokens = 256,
-        .messages = &messages,
-    });
+        .messages = .{
+            .{
+                .role = "user",
+                .content = "Say hello.",
+            },
+        },
+    };
+
+    var response = try anthropic.postJsonRaw(&client, "/v1/messages", request);
     defer response.deinit();
-    // Read response.value().content.
+
+    if (response.status.class() != .success) {
+        return error.AnthropicRequestFailed;
+    }
+
+    std.debug.print("{s}\n", .{response.body});
 }
 ```
+
+`postJsonRaw` accepts ordinary JSON values and returns the HTTP status and response body. The tuple in `messages` becomes a JSON array. This avoids nested generated union types, but does not check request fields against the API schema at compile time.
+
+For typed requests and responses, use the generated operations in [`examples/smoke.zig`](examples/smoke.zig).
 
 API keys go in `x-api-key`. The `Client.init` key argument is a bearer token. The default URL is `https://api.anthropic.com`. Generated paths include `/v1`. You can also pass `@"anthropic-version"` in each operation's named options.
 
